@@ -11,3 +11,12 @@ edition = "2018"
 [build-dependencies]
 cmake = "0.1.42"
 bindgen = "0.58.1"
+
+[dev-dependencies]
+ctrlc = "3.1"
+log = "0.4"
+env_logger = "0.8"
+
+[[example]]
+name = "server"
+crate-type = ["bin"]
