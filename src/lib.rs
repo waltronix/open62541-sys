@@ -1,7 +1,4 @@
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
-    }
-}
+//! Rust bindings for the [open62541](https://open62541.org/) implementation of OPC-UA.
+
+pub mod client;
+pub mod server;
