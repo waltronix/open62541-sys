@@ -1,16 +1,20 @@
 use cmake::Config;
 use std::env;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 fn main() {
     println!("cargo:rerun-if-changed=build.rs");
 
-    let dst = build_open62541();
-    generate_module(&dst, "client");
-    generate_module(&dst, "server");
+    build_open62541();
+    generate_module("client");
+    generate_module("server");
 }
 
-fn build_open62541() -> PathBuf {
+fn out_path() -> PathBuf {
+    PathBuf::from(env::var("OUT_DIR").unwrap())
+}
+
+fn build_open62541() {
     let open62541_path = Config::new("open62541").generator("Ninja").build();
 
     println!(
@@ -18,11 +22,10 @@ fn build_open62541() -> PathBuf {
         open62541_path.display()
     );
     println!("cargo:rustc-link-lib=static=open62541");
-
-    open62541_path
 }
 
-fn generate_module(open62541_path: &Path, module: &str) {
+fn generate_module(module: &str) {
+    let open62541_path = out_path();
     let bindings = bindgen::Builder::default()
         .header(format!("{}.h", module))
         .clang_arg(format!("-I{}/include", open62541_path.display()))
@@ -32,8 +35,7 @@ fn generate_module(open62541_path: &Path, module: &str) {
         .generate()
         .expect("Unable to generate open62541 bindings");
 
-    let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
     bindings
-        .write_to_file(out_path.join(format!("open62541_{}.rs", module)))
+        .write_to_file(out_path().join(format!("open62541_{}.rs", module)))
         .expect("Couldn't write open62541.rs");
 }
