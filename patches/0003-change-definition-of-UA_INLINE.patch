@@ -1,0 +1,28 @@
+From 9602c7d33c008472518559d350929c7a6e1cd4c8 Mon Sep 17 00:00:00 2001
+From: Andreas Walter <andreas.walter@paessler.com>
+Date: Sat, 22 May 2021 00:50:02 +0200
+Subject: [PATCH] change definition of UA_INLINE
+
+---
+ include/open62541/architecture_definitions.h | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/include/open62541/architecture_definitions.h b/include/open62541/architecture_definitions.h
+index 287c8f3e..e2c9c5e0 100644
+--- a/include/open62541/architecture_definitions.h
++++ b/include/open62541/architecture_definitions.h
+@@ -179,9 +179,9 @@ extern void * (*UA_reallocSingleton)(void *ptr, size_t size);
+  * Inline Functions
+  * ---------------- */
+ #ifdef _MSC_VER
+-# define UA_INLINE __inline
++# define UA_STATIC_INLINE static __inline
+ #else
+-# define UA_INLINE inline
++# define UA_STATIC_INLINE static inline
+ #endif
+ 
+ /**
+-- 
+2.31.1.windows.1
+

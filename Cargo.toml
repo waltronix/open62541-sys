@@ -9,8 +9,8 @@ edition = "2018"
 [dependencies]
 
 [build-dependencies]
-cmake = "0.1.42"
-bindgen = "0.58.1"
+bindgen = "0.58"
+cmake = "0.1"
 
 [dev-dependencies]
 ctrlc = "3.1"

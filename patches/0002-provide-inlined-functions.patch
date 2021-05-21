@@ -1,0 +1,52 @@
+From 62b7a41d141d5527ed122b2986afbfca841e620e Mon Sep 17 00:00:00 2001
+From: Andreas Walter <andreas.walter@paessler.com>
+Date: Sat, 22 May 2021 00:40:44 +0200
+Subject: [PATCH 2/2] provide inlined functions
+
+---
+ CMakeLists.txt        |  3 +++
+ src/wrapper/inlines.c | 18 ++++++++++++++++++
+ 2 files changed, 21 insertions(+)
+ create mode 100644 src/wrapper/inlines.c
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 9184b943..55e7c3b2 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -815,6 +815,9 @@ set(lib_sources ${PROJECT_SOURCE_DIR}/src/ua_types.c
+                 ${PROJECT_SOURCE_DIR}/src/client/ua_client_highlevel.c
+                 ${PROJECT_SOURCE_DIR}/src/client/ua_client_subscriptions.c
+ 
++                # wrapper inlines
++                ${PROJECT_SOURCE_DIR}/src/wrapper/inlines.c
++
+                 # dependencies
+                 ${PROJECT_SOURCE_DIR}/deps/libc_time.c
+                 ${PROJECT_SOURCE_DIR}/deps/pcg_basic.c
+diff --git a/src/wrapper/inlines.c b/src/wrapper/inlines.c
+new file mode 100644
+index 00000000..5ea256b4
+--- /dev/null
++++ b/src/wrapper/inlines.c
+@@ -0,0 +1,18 @@
++#include <open62541/architecture_definitions.h>
++
++#ifdef UA_STATIC_INLINE
++#   undef UA_STATIC_INLINE
++#   ifdef _MSC_VER
++#    define UA_STATIC_INLINE extern __inline
++#   else
++#    define UA_STATIC_INLINE extern inline
++#   endif
++#endif
++
++#include <open62541/server.h>
++#include <open62541/server_config_default.h>
++
++#include <open62541/client.h>
++#include <open62541/client_config_default.h>
++#include <open62541/client_highlevel.h>
++#include <open62541/client_highlevel_async.h>
+-- 
+2.31.1.windows.1
+
