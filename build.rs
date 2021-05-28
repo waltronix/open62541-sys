@@ -20,32 +20,36 @@ fn out_path() -> PathBuf {
 }
 
 fn get_open62541() {
-    println!("get_open62541");
+    println!("get sourcecode for open62541");
 
+    println!("clone: {} into {}", OPEN6251_REPOSITORY_URL, OPEN6251_REPOSITORY_PATH);
     let out = std::process::Command::new("git")
         .args(&["clone", OPEN6251_REPOSITORY_URL, OPEN6251_REPOSITORY_PATH])
         .output()
-        .expect("could not clone repsitory");
-    println!("out: {:?}", out);
+        .unwrap();
+    assert!(out.status.success(), "{:?}", out);
 
-    std::process::Command::new("git")
+    println!("check out: {}", OPEN6251_TAG);
+    let out = std::process::Command::new("git")
         .args(&["checkout", OPEN6251_TAG])
         .current_dir(OPEN6251_REPOSITORY_PATH)
         .output()
-        .expect("could not check out tag");
+        .unwrap();
+    assert!(out.status.success(), "{:?}", out);
 
     let patch_dir = std::path::Path::new("patches");
-    println!("patch_dir: {:?}", patch_dir);
+    println!("apply patches from: {:?}", patch_dir);
     for entry in std::fs::read_dir(patch_dir).unwrap() {
         let patch = entry.unwrap().path();
         println!("patch: {:?}", patch);
         let patch_file = Path::new("..").join(patch);
         let patch_file = patch_file.as_os_str().to_str().unwrap();
-        std::process::Command::new("git")
+        let out = std::process::Command::new("git")
             .args(&["apply", patch_file])
             .current_dir(OPEN6251_REPOSITORY_PATH)
             .output()
-            .expect("could not apply patches");
+            .unwrap();
+        assert!(out.status.success(), "{:?}", out);
     }
 }
 
