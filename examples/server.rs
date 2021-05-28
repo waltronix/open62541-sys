@@ -1,5 +1,32 @@
 use log::{info, LevelFilter};
 use open62541_sys::server::*;
+use std::{
+    sync::{Arc, RwLock},
+    thread::{sleep, spawn},
+    time::Duration,
+};
+
+struct Server {
+    pub ptr: RwLock<*mut UA_Server>,
+}
+
+unsafe impl Send for Server {}
+unsafe impl Sync for Server {}
+impl Server {
+    fn new() -> Self {
+        Server {
+            ptr: RwLock::new(unsafe { UA_Server_new() }),
+        }
+    }
+}
+
+impl Drop for Server {
+    fn drop(&mut self) {
+        info!("drop server handle");
+        let ptr = self.ptr.write().unwrap();
+        unsafe { UA_Server_delete(*ptr) };
+    }
+}
 
 fn main() {
     env_logger::Builder::from_default_env()
@@ -7,23 +34,36 @@ fn main() {
         .init();
 
     info!("starting open62541 sample server");
-    let server = unsafe { UA_Server_new() };
+    let mutexed_server = Arc::new(Server::new());
+    let server = mutexed_server.ptr.read().unwrap();
 
-    let config = unsafe { UA_Server_getConfig(server) };
+    let config = unsafe { UA_Server_getConfig(*server) };
     let status =
         unsafe { UA_ServerConfig_setMinimalCustomBuffer(config, 4840, &UA_STRING_NULL, 0, 0) };
     info!("config: {}", status);
     unsafe { (*config).verifyRequestTimestamp = UA_RuleHandling_UA_RULEHANDLING_ACCEPT };
 
-    add_var(server, "half", 21);
-    add_var(server, "answer", 42);
+    add_var(&mutexed_server, "half", 20);
+    add_var(&mutexed_server, "answer", 42);
+
+    let server_clone = mutexed_server.clone();
+    spawn(move || {
+        let mut val = 20;
+        loop {
+            sleep(Duration::from_secs(1));
+            val += 1;
+            info!("val is now {}", val);
+            update_var(&server_clone, "half", val);
+        }
+    });
 
     let running = true;
-    let status = unsafe { UA_Server_run(server, &running) };
+    let status = unsafe { UA_Server_run(*server, &running) };
+    // let status = unsafe { UA_Server_run_startup(*server) };
     info!("run: {}", status);
 }
 
-fn add_var(server: *mut UA_Server, name: &str, val: i32) {
+fn add_var(server: &Server, name: &str, val: i32) {
     // static void
     // addVariable(UA_Server *server) {
 
@@ -74,7 +114,7 @@ fn add_var(server: *mut UA_Server, name: &str, val: i32) {
     let parent_id = UA_NodeId::from(format!("ns=0;i={}", UA_NS0ID_OBJECTSFOLDER));
     let parent_ref_id = UA_NodeId::from(format!("ns=0;i={}", UA_NS0ID_ORGANIZES));
 
-    let attr_ptr = Box::into_raw(attr) as *mut std::os::raw::c_void;
+    // let attr_ptr = Box::into_raw(attr) as *mut std::os::raw::c_void;
 
     let node_context = Box::new(0);
     let node_context_ptr = Box::into_raw(node_context) as *mut std::os::raw::c_void;
@@ -82,23 +122,46 @@ fn add_var(server: *mut UA_Server, name: &str, val: i32) {
     let mut node_id = unsafe { UA_NODEID_NULL };
     let node_id_ptr = &mut node_id as *mut UA_NodeId;
 
+    let server_ptr = server.ptr.read().unwrap();
     let status = unsafe {
-        UA_Server_addNode_begin(
-            server,
-            UA_NodeClass_UA_NODECLASS_VARIABLE,
+        UA_Server_addVariableNode(
+            *server_ptr,
             req_node_id,
             parent_id,
             parent_ref_id,
             my_integer_name,
             type_id,
-            attr_ptr,
-            &(UA_TYPES[UA_TYPES_VARIABLEATTRIBUTES as usize]),
+            *attr,
             node_context_ptr,
             node_id_ptr,
         )
     };
     info!("add node begin: {}", status);
+}
 
-    let status = unsafe { UA_Server_addNode_finish(server, node_id) };
-    info!("add node finish: {} - {}", status, node_id);
+fn update_var(mutexed_server: &Arc<Server>, name: &str, val: i32) {
+    let value = unsafe { UA_Variant_new() };
+    let val_ptr = &val as *const i32;
+    unsafe {
+        UA_Variant_setScalarCopy(
+            value,
+            val_ptr as *const std::os::raw::c_void,
+            &UA_TYPES[UA_TYPES_INT32 as usize],
+        )
+    };
+
+    let current_node_id = UA_NodeId::from(format!("ns=1;s={}", name));
+
+    let server = mutexed_server.ptr.read().unwrap();
+    unsafe { UA_Server_writeValue(*server, current_node_id, *value) };
+
+    unsafe { UA_Variant_delete(value) };
+    // static void
+    // updateCurrentTime(UA_Server *server) {
+    //     UA_DateTime now = UA_DateTime_now();
+    //     UA_Variant value;
+    //     UA_Variant_setScalar(&value, &now, &UA_TYPES[UA_TYPES_DATETIME]);
+    //     UA_NodeId currentNodeId = UA_NODEID_STRING(1, "current-time-value-callback");
+    //     UA_Server_writeValue(server, currentNodeId, value);
+    // }
 }
