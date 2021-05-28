@@ -55,7 +55,6 @@ fn get_open62541() {
 
 fn build_open62541() {
     let open62541_path = Config::new(OPEN6251_REPOSITORY_PATH)
-        .generator("Ninja")
         .very_verbose(true)
         .build();
 
